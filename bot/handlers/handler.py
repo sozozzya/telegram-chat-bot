@@ -4,6 +4,7 @@ from enum import Enum
 from bot.domain.messenger import Messenger
 from bot.domain.storage import Storage
 
+
 class HandlerStatus(Enum):
     CONTINUE = 1
     STOP = 2

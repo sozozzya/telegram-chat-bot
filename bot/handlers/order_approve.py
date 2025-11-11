@@ -5,7 +5,14 @@ from bot.handlers.handler import Handler, HandlerStatus
 
 
 class OrderApprove(Handler):
-    def can_handle(self, update: dict, state: str, order_json: dict, storage: Storage, messenger: Messenger) -> bool:
+    def can_handle(
+        self,
+        update: dict,
+        state: str,
+        order_json: dict,
+        storage: Storage,
+        messenger: Messenger,
+    ) -> bool:
         if "callback_query" not in update:
             return False
 
@@ -16,7 +23,12 @@ class OrderApprove(Handler):
         return callback_data in ["approve_yes", "approve_restart"]
 
     def handle(
-        self, update: dict, state: str, order_json: dict, storage: Storage, messenger: Messenger,
+        self,
+        update: dict,
+        state: str,
+        order_json: dict,
+        storage: Storage,
+        messenger: Messenger,
     ) -> HandlerStatus:
         telegram_id = update["callback_query"]["from"]["id"]
         callback_data = update["callback_query"]["data"]
@@ -26,10 +38,8 @@ class OrderApprove(Handler):
         messenger.answer_callback_query(update["callback_query"]["id"])
 
         if callback_data == "approve_yes":
-            storage.update_user_state(
-                telegram_id, "ORDER_FINISHED")
-            messenger.delete_message(
-                chat_id=chat_id, message_id=message_id)
+            storage.update_user_state(telegram_id, "ORDER_FINISHED")
+            messenger.delete_message(chat_id=chat_id, message_id=message_id)
             messenger.send_message(
                 chat_id=chat_id,
                 text="🎉 Thank you! Your order has been confirmed and is being prepared!",
@@ -39,42 +49,43 @@ class OrderApprove(Handler):
 
         if callback_data == "approve_restart":
             try:
-                messenger.delete_message(
-                    chat_id=chat_id, message_id=message_id - 1)
+                messenger.delete_message(chat_id=chat_id, message_id=message_id - 1)
             except Exception:
                 pass
 
             storage.clear_user_order_json(telegram_id)
-            storage.update_user_state(
-                telegram_id, "WAIT_FOR_PIZZA_NAME")
+            storage.update_user_state(telegram_id, "WAIT_FOR_PIZZA_NAME")
 
-            messenger.delete_message(
-                chat_id=chat_id, message_id=message_id)
+            messenger.delete_message(chat_id=chat_id, message_id=message_id)
 
             messenger.send_message(
                 chat_id=chat_id,
                 text="Please choose your pizza 🍽️",
                 reply_markup=json.dumps(
                     {
-                        "inline_keyboard":
-                        [
+                        "inline_keyboard": [
                             [
-                                {"text": "🍅 Margherita",
-                                 "callback_data": "pizza_margherita"},
-                                {"text": "🔥 Pepperoni",
-                                 "callback_data": "pizza_pepperoni"},
+                                {
+                                    "text": "🍅 Margherita",
+                                    "callback_data": "pizza_margherita",
+                                },
+                                {
+                                    "text": "🔥 Pepperoni",
+                                    "callback_data": "pizza_pepperoni",
+                                },
                             ],
                             [
                                 {
                                     "text": "🌿 Quatro Stagioni",
-                                    "callback_data": "pizza_quatro_stagioni"
+                                    "callback_data": "pizza_quatro_stagioni",
                                 },
                             ],
                             [
-                                {"text": "🌶️ Diavola",
-                                    "callback_data": "pizza_diavola"},
-                                {"text": "🥓 Prosciutto",
-                                 "callback_data": "pizza_prosciutto"},
+                                {"text": "🌶️ Diavola", "callback_data": "pizza_diavola"},
+                                {
+                                    "text": "🥓 Prosciutto",
+                                    "callback_data": "pizza_prosciutto",
+                                },
                             ],
                         ],
                     }

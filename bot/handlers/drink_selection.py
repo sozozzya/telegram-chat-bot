@@ -5,7 +5,14 @@ from bot.handlers.handler import Handler, HandlerStatus
 
 
 class DrinkSelection(Handler):
-    def can_handle(self, update: dict, state: str, order_json: dict, storage: Storage, messenger: Messenger) -> bool:
+    def can_handle(
+        self,
+        update: dict,
+        state: str,
+        order_json: dict,
+        storage: Storage,
+        messenger: Messenger,
+    ) -> bool:
         if "callback_query" not in update:
             return False
 
@@ -16,7 +23,12 @@ class DrinkSelection(Handler):
         return callback_data.startswith("drink_")
 
     def handle(
-        self, update: dict, state: str, order_json: dict, storage: Storage, messenger: Messenger,
+        self,
+        update: dict,
+        state: str,
+        order_json: dict,
+        storage: Storage,
+        messenger: Messenger,
     ) -> HandlerStatus:
         telegram_id = update["callback_query"]["from"]["id"]
         callback_data = update["callback_query"]["data"]
@@ -31,13 +43,11 @@ class DrinkSelection(Handler):
 
         storage.update_user_order_json(telegram_id, order_json)
 
-        storage.update_user_state(
-            telegram_id, "WAIT_FOR_ORDER_APPROVE")
+        storage.update_user_state(telegram_id, "WAIT_FOR_ORDER_APPROVE")
 
         messenger.answer_callback_query(update["callback_query"]["id"])
 
-        messenger.delete_message(
-            chat_id=chat_id, message_id=message_id)
+        messenger.delete_message(chat_id=chat_id, message_id=message_id)
 
         order_summary = (
             f"Your order summary:\n"
@@ -56,8 +66,10 @@ class DrinkSelection(Handler):
                     "inline_keyboard": [
                         [
                             {"text": "✅ Confirm", "callback_data": "approve_yes"},
-                            {"text": "❌ Start Over",
-                                "callback_data": "approve_restart"},
+                            {
+                                "text": "❌ Start Over",
+                                "callback_data": "approve_restart",
+                            },
                         ]
                     ],
                 }

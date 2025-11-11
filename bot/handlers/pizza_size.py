@@ -5,7 +5,14 @@ from bot.handlers.handler import Handler, HandlerStatus
 
 
 class PizzaSize(Handler):
-    def can_handle(self, update: dict, state: str, order_json: dict, storage: Storage, messenger: Messenger) -> bool:
+    def can_handle(
+        self,
+        update: dict,
+        state: str,
+        order_json: dict,
+        storage: Storage,
+        messenger: Messenger,
+    ) -> bool:
         if "callback_query" not in update:
             return False
 
@@ -16,7 +23,12 @@ class PizzaSize(Handler):
         return callback_data.startswith("size_")
 
     def handle(
-        self, update: dict, state: str, order_json: dict, storage: Storage, messenger: Messenger,
+        self,
+        update: dict,
+        state: str,
+        order_json: dict,
+        storage: Storage,
+        messenger: Messenger,
     ) -> HandlerStatus:
         telegram_id = update["callback_query"]["from"]["id"]
         callback_data = update["callback_query"]["data"]
@@ -33,17 +45,13 @@ class PizzaSize(Handler):
         pizza_size = size_mapping.get(callback_data)
         order_json["pizza_size"] = pizza_size
 
-        storage.update_user_order_json(
-            telegram_id, order_json)
+        storage.update_user_order_json(telegram_id, order_json)
 
-        storage.update_user_state(
-            telegram_id, "WAIT_FOR_DRINKS")
+        storage.update_user_state(telegram_id, "WAIT_FOR_DRINKS")
 
-        messenger.answer_callback_query(
-            update["callback_query"]["id"])
+        messenger.answer_callback_query(update["callback_query"]["id"])
 
-        messenger.delete_message(
-            chat_id=chat_id, message_id=message_id)
+        messenger.delete_message(chat_id=chat_id, message_id=message_id)
 
         messenger.send_message(
             chat_id=chat_id,
@@ -52,26 +60,31 @@ class PizzaSize(Handler):
                 {
                     "inline_keyboard": [
                         [
-                            {"text": "🥤 Coca-cola",
-                                "callback_data": "drink_coca_cola"},
-                            {"text": "🥤 Pepsi",
-                             "callback_data": "drink_pepsi"},
+                            {
+                                "text": "🥤 Coca-cola",
+                                "callback_data": "drink_coca_cola",
+                            },
+                            {"text": "🥤 Pepsi", "callback_data": "drink_pepsi"},
                         ],
                         [
-                            {"text": "🍊 Orange Juice",
-                             "callback_data": "drink_orange_juice"},
-                            {"text": "🍏 Apple Juice",
-                             "callback_data": "drink_apple_juice"},
+                            {
+                                "text": "🍊 Orange Juice",
+                                "callback_data": "drink_orange_juice",
+                            },
+                            {
+                                "text": "🍏 Apple Juice",
+                                "callback_data": "drink_apple_juice",
+                            },
                         ],
                         [
-                            {"text": "💧 Water",
-                             "callback_data": "drink_water"},
-                            {"text": "🧊 Iced Tea",
-                             "callback_data": "drink_iced_tea"},
+                            {"text": "💧 Water", "callback_data": "drink_water"},
+                            {"text": "🧊 Iced Tea", "callback_data": "drink_iced_tea"},
                         ],
                         [
-                            {"text": "🚫 No drinks",
-                             "callback_data": "drink_no_drinks"},
+                            {
+                                "text": "🚫 No drinks",
+                                "callback_data": "drink_no_drinks",
+                            },
                         ],
                     ],
                 },

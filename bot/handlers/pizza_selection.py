@@ -5,7 +5,14 @@ from bot.handlers.handler import Handler, HandlerStatus
 
 
 class PizzaSelection(Handler):
-    def can_handle(self, update: dict, state: str, order_json: dict, storage: Storage, messenger: Messenger) -> bool:
+    def can_handle(
+        self,
+        update: dict,
+        state: str,
+        order_json: dict,
+        storage: Storage,
+        messenger: Messenger,
+    ) -> bool:
         if "callback_query" not in update:
             return False
 
@@ -16,26 +23,27 @@ class PizzaSelection(Handler):
         return callback_data.startswith("pizza_")
 
     def handle(
-        self, update: dict, state: str, order_json: dict, storage: Storage, messenger: Messenger,
+        self,
+        update: dict,
+        state: str,
+        order_json: dict,
+        storage: Storage,
+        messenger: Messenger,
     ) -> HandlerStatus:
         telegram_id = update["callback_query"]["from"]["id"]
         callback_data = update["callback_query"]["data"]
         chat_id = update["callback_query"]["message"]["chat"]["id"]
         message_id = update["callback_query"]["message"]["message_id"]
 
-        pizza_name = callback_data.replace(
-            "pizza_", "").replace("_", "").title()
+        pizza_name = callback_data.replace("pizza_", "").replace("_", "").title()
 
-        storage.update_user_order_json(
-            telegram_id, {"pizza_name": pizza_name})
+        storage.update_user_order_json(telegram_id, {"pizza_name": pizza_name})
 
-        storage.update_user_state(
-            telegram_id, "WAIT_FOR_PIZZA_SIZE")
+        storage.update_user_state(telegram_id, "WAIT_FOR_PIZZA_SIZE")
 
         messenger.answer_callback_query(update["callback_query"]["id"])
 
-        messenger.delete_message(
-            chat_id=chat_id, message_id=message_id)
+        messenger.delete_message(chat_id=chat_id, message_id=message_id)
 
         messenger.send_message(
             chat_id=chat_id,
@@ -44,20 +52,25 @@ class PizzaSelection(Handler):
                 {
                     "inline_keyboard": [
                         [
-                            {"text": "🍕 Small (25cm)",
-                                "callback_data": "size_small"},
+                            {"text": "🍕 Small (25cm)", "callback_data": "size_small"},
                         ],
                         [
-                            {"text": "🍕➡️ Medium (30cm)",
-                             "callback_data": "size_medium"},
+                            {
+                                "text": "🍕➡️ Medium (30cm)",
+                                "callback_data": "size_medium",
+                            },
                         ],
                         [
-                            {"text": "🍕🍕 Large (35cm)",
-                             "callback_data": "size_large"},
+                            {
+                                "text": "🍕🍕 Large (35cm)",
+                                "callback_data": "size_large",
+                            },
                         ],
                         [
-                            {"text": "🍕🍕👑 Extra Large (40cm)",
-                             "callback_data": "size_extra_large"},
+                            {
+                                "text": "🍕🍕👑 Extra Large (40cm)",
+                                "callback_data": "size_extra_large",
+                            },
                         ],
                     ],
                 },
