@@ -1,6 +1,5 @@
 from bot.dispatcher import Dispatcher
 from bot.domain.messenger import Messenger
-import time
 
 
 def start_long_polling(dispatcher: Dispatcher, messenger: Messenger) -> None:
