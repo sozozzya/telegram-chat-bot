@@ -28,7 +28,7 @@ class RestartOrder(Handler):
         messenger: Messenger,
     ) -> HandlerStatus:
         telegram_id = update["message"]["from"]["id"]
-        chat_id = update["callback_query"]["message"]["chat"]["id"]
+        chat_id = update["message"]["chat"]["id"]
 
         storage.clear_user_order_json(telegram_id)
 
