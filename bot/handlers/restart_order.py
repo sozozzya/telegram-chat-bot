@@ -2,40 +2,55 @@ import json
 from bot.domain.messenger import Messenger
 from bot.domain.storage import Storage
 from bot.handlers.handler import Handler, HandlerStatus
+from bot.domain.order_state import OrderState
 
 
 class RestartOrder(Handler):
     def can_handle(
         self,
         update: dict,
-        state: str,
+        state: OrderState,
         order_json: dict,
         storage: Storage,
         messenger: Messenger,
     ) -> bool:
-        return (
-            "message" in update
-            and "text" in update["message"]
-            and update["message"]["text"].lower() in ["/restart", "start over"]
-        )
+        if "callback_query" not in update:
+            return False
+
+        if state != OrderState.WAIT_FOR_ORDER_APPROVE:
+            return False
+
+        callback_data = update["callback_query"]["data"]
+        return callback_data == "restart_order"
 
     def handle(
         self,
         update: dict,
-        state: str,
+        state: OrderState,
         order_json: dict,
         storage: Storage,
         messenger: Messenger,
     ) -> HandlerStatus:
-        telegram_id = update["message"]["from"]["id"]
-        chat_id = update["message"]["chat"]["id"]
+        telegram_id = update["callback_query"]["from"]["id"]
+
+        messenger.answer_callback_query(update["callback_query"]["id"])
+
+        messenger.delete_message(
+            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            message_id=update["callback_query"]["message"]["message_id"],
+        )
+
+        messenger.delete_message(
+            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            message_id=update["callback_query"]["message"]["message_id"] - 1,
+        )
 
         storage.clear_user_order_json(telegram_id)
 
         storage.update_user_state(telegram_id, "WAIT_FOR_PIZZA_NAME")
 
         messenger.send_message(
-            chat_id=chat_id,
+            chat_id=update["callback_query"]["message"]["chat"]["id"],
             text="Please choose your pizza 🍽️",
             reply_markup=json.dumps(
                 {

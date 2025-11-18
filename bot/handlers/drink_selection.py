@@ -2,13 +2,15 @@ import json
 from bot.domain.messenger import Messenger
 from bot.domain.storage import Storage
 from bot.handlers.handler import Handler, HandlerStatus
+from bot.domain.order_state import OrderState
+from bot.constants.prices import PIZZA_PRICES, DRINK_PRICES
 
 
 class DrinkSelection(Handler):
     def can_handle(
         self,
         update: dict,
-        state: str,
+        state: OrderState,
         order_json: dict,
         storage: Storage,
         messenger: Messenger,
@@ -16,7 +18,7 @@ class DrinkSelection(Handler):
         if "callback_query" not in update:
             return False
 
-        if state != "WAIT_FOR_DRINKS":
+        if state != OrderState.WAIT_FOR_DRINKS:
             return False
 
         callback_data = update["callback_query"]["data"]
@@ -25,7 +27,7 @@ class DrinkSelection(Handler):
     def handle(
         self,
         update: dict,
-        state: str,
+        state: OrderState,
         order_json: dict,
         storage: Storage,
         messenger: Messenger,
@@ -33,7 +35,6 @@ class DrinkSelection(Handler):
         telegram_id = update["callback_query"]["from"]["id"]
         callback_data = update["callback_query"]["data"]
         chat_id = update["callback_query"]["message"]["chat"]["id"]
-        message_id = update["callback_query"]["message"]["message_id"]
 
         drink = callback_data.replace("drink_", "").replace("_", " ").title()
         if drink == "None":
@@ -43,32 +44,46 @@ class DrinkSelection(Handler):
 
         storage.update_user_order_json(telegram_id, order_json)
 
-        storage.update_user_state(telegram_id, "WAIT_FOR_ORDER_APPROVE")
+        storage.update_user_state(telegram_id, OrderState.WAIT_FOR_ORDER_APPROVE)
 
         messenger.answer_callback_query(update["callback_query"]["id"])
 
-        messenger.delete_message(chat_id=chat_id, message_id=message_id)
-
-        order_summary = (
-            f"Your order summary:\n"
-            f"🍕 Pizza: {order_json.get('pizza_name', '-')}\n"
-            f"📏 Size: {order_json.get('pizza_size', '-')}\n"
-            f"🥤 Drink: {order_json.get('drink', '-')}"
+        messenger.delete_message(
+            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            message_id=update["callback_query"]["message"]["message_id"],
         )
 
-        messenger.send_message(chat_id=chat_id, text=order_summary)
+        pizza_name = order_json.get("pizza_name", "Unknown")
+        pizza_size = order_json.get("pizza_size", "Unknown")
+        drink = order_json.get("drink", "Unknown")
+
+        pizza_price_rub = PIZZA_PRICES.get(pizza_size, 0) // 100
+        drink_price_rub = DRINK_PRICES.get(drink, 0) // 100
+
+        order_summary = (
+            f"**Your order summary:**\n"
+            f"🍕 Pizza: *{pizza_name}*\n"
+            f"📏 Size: *{pizza_size}* — *{pizza_price_rub} ₽*\n"
+            f"🥤 Drink: *{drink}* — *{drink_price_rub} ₽*\n"
+            f"\n"
+            f"💰 Total: *{pizza_price_rub + drink_price_rub} ₽*"
+        )
 
         messenger.send_message(
-            chat_id=chat_id,
+            chat_id=chat_id, text=order_summary, parse_mode="Markdown"
+        )
+
+        messenger.send_message(
+            chat_id=update["callback_query"]["message"]["chat"]["id"],
             text="Do you confirm your order?",
             reply_markup=json.dumps(
                 {
                     "inline_keyboard": [
                         [
-                            {"text": "✅ Confirm", "callback_data": "approve_yes"},
+                            {"text": "✅ Confirm", "callback_data": "approve_order"},
                             {
-                                "text": "❌ Start Over",
-                                "callback_data": "approve_restart",
+                                "text": "🔄 Start Over",
+                                "callback_data": "restart_order",
                             },
                         ]
                     ],

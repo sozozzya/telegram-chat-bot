@@ -1,5 +1,6 @@
 from bot.dispatcher import Dispatcher
 from bot.handlers.pizza_size import PizzaSize
+from bot.domain.order_state import OrderState
 from tests.mocks import Mock
 import json
 
@@ -48,9 +49,9 @@ def test_pizza_size_handler():
         nonlocal update_user_order_json_called
         update_user_order_json_called = True
 
-    def update_user_state(telegram_id: int, state: str) -> None:
+    def update_user_state(telegram_id: int, state: OrderState) -> None:
         assert telegram_id == 12345
-        assert state == "WAIT_FOR_DRINKS"
+        assert state == OrderState.WAIT_FOR_DRINKS
         nonlocal update_user_state_called
         update_user_state_called = True
 

@@ -2,13 +2,15 @@ import json
 from bot.domain.messenger import Messenger
 from bot.domain.storage import Storage
 from bot.handlers.handler import Handler, HandlerStatus
+from bot.domain.order_state import OrderState
+from bot.constants.prices import PIZZA_PRICES
 
 
 class PizzaSelection(Handler):
     def can_handle(
         self,
         update: dict,
-        state: str,
+        state: OrderState,
         order_json: dict,
         storage: Storage,
         messenger: Messenger,
@@ -16,7 +18,7 @@ class PizzaSelection(Handler):
         if "callback_query" not in update:
             return False
 
-        if state != "WAIT_FOR_PIZZA_NAME":
+        if state != OrderState.WAIT_FOR_PIZZA_NAME:
             return False
 
         callback_data = update["callback_query"]["data"]
@@ -25,50 +27,61 @@ class PizzaSelection(Handler):
     def handle(
         self,
         update: dict,
-        state: str,
+        state: OrderState,
         order_json: dict,
         storage: Storage,
         messenger: Messenger,
     ) -> HandlerStatus:
         telegram_id = update["callback_query"]["from"]["id"]
         callback_data = update["callback_query"]["data"]
-        chat_id = update["callback_query"]["message"]["chat"]["id"]
-        message_id = update["callback_query"]["message"]["message_id"]
 
         pizza_name = callback_data.replace("pizza_", "").replace("_", "").title()
 
         storage.update_user_order_json(telegram_id, {"pizza_name": pizza_name})
 
-        storage.update_user_state(telegram_id, "WAIT_FOR_PIZZA_SIZE")
+        storage.update_user_state(telegram_id, OrderState.WAIT_FOR_PIZZA_SIZE)
 
         messenger.answer_callback_query(update["callback_query"]["id"])
 
-        messenger.delete_message(chat_id=chat_id, message_id=message_id)
+        messenger.delete_message(
+            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            message_id=update["callback_query"]["message"]["message_id"],
+        )
+
+        text = (
+            f"Great choice! 🍕\n"
+            f"You selected *{pizza_name}*\n"
+            f"Now choose your pizza size 📏"
+        )
 
         messenger.send_message(
-            chat_id=chat_id,
-            text=f"Great choice! 🍕 \nYou selected {pizza_name}.\nNow choose your pizza size 📏",
+            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            text=text,
+            parse_mode="Markdown",
             reply_markup=json.dumps(
                 {
                     "inline_keyboard": [
                         [
-                            {"text": "🍕 Small (25cm)", "callback_data": "size_small"},
+                            {
+                                "text": f"🍕 Small (25cm) — {PIZZA_PRICES['Small (25cm)'] // 100} ₽",
+                                "callback_data": "size_small",
+                            },
                         ],
                         [
                             {
-                                "text": "🍕➡️ Medium (30cm)",
+                                "text": f"🍕➡️ Medium (30cm) — {PIZZA_PRICES['Medium (30cm)'] // 100} ₽",
                                 "callback_data": "size_medium",
                             },
                         ],
                         [
                             {
-                                "text": "🍕🍕 Large (35cm)",
+                                "text": f"🍕🍕 Large (35cm) — {PIZZA_PRICES['Large (35cm)'] // 100} ₽",
                                 "callback_data": "size_large",
                             },
                         ],
                         [
                             {
-                                "text": "🍕🍕👑 Extra Large (40cm)",
+                                "text": f"🍕🍕👑 Extra Large (40cm) — {PIZZA_PRICES['Extra Large (40cm)'] // 100} ₽",
                                 "callback_data": "size_extra_large",
                             },
                         ],

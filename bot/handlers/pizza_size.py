@@ -2,13 +2,15 @@ import json
 from bot.domain.messenger import Messenger
 from bot.domain.storage import Storage
 from bot.handlers.handler import Handler, HandlerStatus
+from bot.domain.order_state import OrderState
+from bot.constants.prices import DRINK_PRICES
 
 
 class PizzaSize(Handler):
     def can_handle(
         self,
         update: dict,
-        state: str,
+        state: OrderState,
         order_json: dict,
         storage: Storage,
         messenger: Messenger,
@@ -16,7 +18,7 @@ class PizzaSize(Handler):
         if "callback_query" not in update:
             return False
 
-        if state != "WAIT_FOR_PIZZA_SIZE":
+        if state != OrderState.WAIT_FOR_PIZZA_SIZE:
             return False
 
         callback_data = update["callback_query"]["data"]
@@ -25,15 +27,13 @@ class PizzaSize(Handler):
     def handle(
         self,
         update: dict,
-        state: str,
+        state: OrderState,
         order_json: dict,
         storage: Storage,
         messenger: Messenger,
     ) -> HandlerStatus:
         telegram_id = update["callback_query"]["from"]["id"]
         callback_data = update["callback_query"]["data"]
-        chat_id = update["callback_query"]["message"]["chat"]["id"]
-        message_id = update["callback_query"]["message"]["message_id"]
 
         size_mapping = {
             "size_small": "Small (25cm)",
@@ -47,38 +47,57 @@ class PizzaSize(Handler):
 
         storage.update_user_order_json(telegram_id, order_json)
 
-        storage.update_user_state(telegram_id, "WAIT_FOR_DRINKS")
+        storage.update_user_state(telegram_id, OrderState.WAIT_FOR_DRINKS)
 
         messenger.answer_callback_query(update["callback_query"]["id"])
 
-        messenger.delete_message(chat_id=chat_id, message_id=message_id)
+        messenger.delete_message(
+            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            message_id=update["callback_query"]["message"]["message_id"],
+        )
+
+        text = (
+            f"Perfect! 🎯\n"
+            f"Selected *{pizza_size}* size\n"
+            f"Would you like a drink? 🥤"
+        )
 
         messenger.send_message(
-            chat_id=chat_id,
-            text=f"Perfect! 🎯 \nSize {pizza_size} selected.\nWould you like a drink? 🥤",
+            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            text=text,
+            parse_mode="Markdown",
             reply_markup=json.dumps(
                 {
                     "inline_keyboard": [
                         [
                             {
-                                "text": "🥤 Coca-cola",
+                                "text": f"🥤 Coca-cola — {DRINK_PRICES['Coca Cola'] // 100} ₽",
                                 "callback_data": "drink_coca_cola",
                             },
-                            {"text": "🥤 Pepsi", "callback_data": "drink_pepsi"},
+                            {
+                                "text": f"🥤 Pepsi — {DRINK_PRICES['Pepsi'] // 100} ₽",
+                                "callback_data": "drink_pepsi",
+                            },
                         ],
                         [
                             {
-                                "text": "🍊 Orange Juice",
+                                "text": f"🍊 Orange Juice — {DRINK_PRICES['Orange Juice'] // 100} ₽",
                                 "callback_data": "drink_orange_juice",
                             },
                             {
-                                "text": "🍏 Apple Juice",
+                                "text": f"🍏 Apple Juice — {DRINK_PRICES['Apple Juice'] // 100} ₽",
                                 "callback_data": "drink_apple_juice",
                             },
                         ],
                         [
-                            {"text": "💧 Water", "callback_data": "drink_water"},
-                            {"text": "🧊 Iced Tea", "callback_data": "drink_iced_tea"},
+                            {
+                                "text": f"💧 Water — {DRINK_PRICES['Water'] // 100} ₽",
+                                "callback_data": "drink_water",
+                            },
+                            {
+                                "text": f"🧊 Iced Tea — {DRINK_PRICES['Iced Tea'] // 100} ₽",
+                                "callback_data": "drink_iced_tea",
+                            },
                         ],
                         [
                             {
