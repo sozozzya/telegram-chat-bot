@@ -32,17 +32,13 @@ class RestartOrder(Handler):
         messenger: Messenger,
     ) -> HandlerStatus:
         telegram_id = update["callback_query"]["from"]["id"]
+        chat_id = update["callback_query"]["message"]["chat"]["id"]
 
         messenger.answer_callback_query(update["callback_query"]["id"])
 
         messenger.delete_message(
-            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            chat_id=chat_id,
             message_id=update["callback_query"]["message"]["message_id"],
-        )
-
-        messenger.delete_message(
-            chat_id=update["callback_query"]["message"]["chat"]["id"],
-            message_id=update["callback_query"]["message"]["message_id"] - 1,
         )
 
         storage.clear_user_order_json(telegram_id)
@@ -50,7 +46,7 @@ class RestartOrder(Handler):
         storage.update_user_state(telegram_id, "WAIT_FOR_PIZZA_NAME")
 
         messenger.send_message(
-            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            chat_id=chat_id,
             text="Please choose your pizza 🍽️",
             reply_markup=json.dumps(
                 {

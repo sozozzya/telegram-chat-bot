@@ -41,10 +41,9 @@ class DrinkSelection(Handler):
             drink = "No drinks"
 
         order_json["drink"] = drink
-
         storage.update_user_order_json(telegram_id, order_json)
-
-        storage.update_user_state(telegram_id, OrderState.WAIT_FOR_ORDER_APPROVE)
+        storage.update_user_state(
+            telegram_id, OrderState.WAIT_FOR_ORDER_APPROVE)
 
         messenger.answer_callback_query(update["callback_query"]["id"])
 
@@ -55,27 +54,22 @@ class DrinkSelection(Handler):
 
         pizza_name = order_json.get("pizza_name", "Unknown")
         pizza_size = order_json.get("pizza_size", "Unknown")
-        drink = order_json.get("drink", "Unknown")
 
         pizza_price_rub = PIZZA_PRICES.get(pizza_size, 0) // 100
         drink_price_rub = DRINK_PRICES.get(drink, 0) // 100
 
         order_summary = (
-            f"**Your order summary:**\n"
+            f"**Do you confirm your order?**\n"
             f"🍕 Pizza: *{pizza_name}*\n"
             f"📏 Size: *{pizza_size}* — *{pizza_price_rub} ₽*\n"
-            f"🥤 Drink: *{drink}* — *{drink_price_rub} ₽*\n"
-            f"\n"
+            f"🥤 Drink: *{drink}* — *{drink_price_rub} ₽*\n\n"
             f"💰 Total: *{pizza_price_rub + drink_price_rub} ₽*"
         )
 
         messenger.send_message(
-            chat_id=chat_id, text=order_summary, parse_mode="Markdown"
-        )
-
-        messenger.send_message(
             chat_id=update["callback_query"]["message"]["chat"]["id"],
-            text="Do you confirm your order?",
+            text=order_summary, 
+            parse_mode="Markdown",
             reply_markup=json.dumps(
                 {
                     "inline_keyboard": [

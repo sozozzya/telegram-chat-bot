@@ -4,6 +4,7 @@ from bot.domain.messenger import Messenger
 from bot.domain.storage import Storage
 from bot.handlers.handler import Handler, HandlerStatus
 from bot.domain.order_state import OrderState
+from bot.constants.prices import PIZZA_PRICES, DRINK_PRICES
 
 
 class ApproveOrder(Handler):
@@ -21,8 +22,7 @@ class ApproveOrder(Handler):
         if state != OrderState.WAIT_FOR_ORDER_APPROVE:
             return False
 
-        callback_data = update["callback_query"]["data"]
-        return callback_data == "approve_order"
+        return update["callback_query"]["data"] == "approve_order"
 
     def handle(
         self,
@@ -33,11 +33,12 @@ class ApproveOrder(Handler):
         messenger: Messenger,
     ) -> HandlerStatus:
         telegram_id = update["callback_query"]["from"]["id"]
+        chat_id = update["callback_query"]["message"]["chat"]["id"]
 
         messenger.answer_callback_query(update["callback_query"]["id"])
 
         messenger.delete_message(
-            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            chat_id=chat_id,
             message_id=update["callback_query"]["message"]["message_id"],
         )
 
@@ -45,23 +46,21 @@ class ApproveOrder(Handler):
 
         pizza_name = order_json.get("pizza_name", "Unknown")
         pizza_size = order_json.get("pizza_size", "Unknown")
-        drink = order_json.get("drink", "Unknown")
+        drink = order_json.get("drink", "No drinks")
 
-        pizza_prices = {
-            "Small (25cm)": 50000,  # 500.00 RUB
-            "Medium (30cm)": 65000,  # 650.00 RUB
-            "Large (35cm)": 80000,  # 800.00 RUB
-            "Extra Large (40cm)": 95000,  # 950.00 RUB
-        }
-        drink_price = 10000  # 100.00 RUB (if drink is selected and not "No drinks")
+        pizza_price = PIZZA_PRICES.get(pizza_size, 0)
+        drink_price = DRINK_PRICES.get(drink, 0)
 
-        pizza_price = pizza_prices.get(pizza_size, 50000)
         prices = [
-            {"label": f"Pizza: {pizza_name} ({pizza_size})", "amount": pizza_price}
+            {"label": f"Pizza: {pizza_name} ({pizza_size})",
+             "amount": pizza_price}
         ]
-
         if drink and drink != "No drinks":
             prices.append({"label": f"Drink: {drink}", "amount": drink_price})
+
+        order_description = f"🍕 Pizza: {pizza_name}, 📏 size: {pizza_size}"
+        if drink and drink != "No drinks":
+            order_description += f", 🥤 drink: {drink}."
 
         order_payload = json.dumps(
             {
@@ -73,9 +72,9 @@ class ApproveOrder(Handler):
         )
 
         messenger.send_invoice(
-            chat_id=update["callback_query"]["message"]["chat"]["id"],
-            title="Pizza Order",
-            description=f"Pizza: {pizza_name}, Size: {pizza_size}, Drink: {drink}",
+            chat_id=chat_id,
+            title="🧾 Pizza Order",
+            description=order_description,
             payload=order_payload,
             provider_token=os.getenv("YOOKASSA_TOKEN"),
             currency="RUB",

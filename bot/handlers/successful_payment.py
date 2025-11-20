@@ -15,10 +15,7 @@ class SuccessfulPaymentHandler(Handler):
         storage: Storage,
         messenger: Messenger,
     ) -> bool:
-        if "message" not in update:
-            return False
-
-        return "successful_payment" in update["message"]
+        return "message" in update and "successful_payment" in update["message"]
 
     def handle(
         self,
@@ -35,8 +32,10 @@ class SuccessfulPaymentHandler(Handler):
 
         messenger.send_message(
             chat_id=update["message"]["chat"]["id"],
-            text="🎉 Thank you! Your order has been confirmed and is being prepared! \n"
-            "Thank you for your payment! Your pizza will be ready soon. Send /start to place another order.",
+            text=(
+                "🎉 Thank you! Your payment has been received. 🚚 Pizza will be ready soon.\n\n"
+                "📩 Send /start to place another order."
+            ),
             reply_markup=json.dumps({"remove_keyboard": True}),
         )
 
