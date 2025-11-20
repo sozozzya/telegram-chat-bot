@@ -42,13 +42,12 @@ class DrinkSelection(Handler):
 
         order_json["drink"] = drink
         storage.update_user_order_json(telegram_id, order_json)
-        storage.update_user_state(
-            telegram_id, OrderState.WAIT_FOR_ORDER_APPROVE)
+        storage.update_user_state(telegram_id, OrderState.WAIT_FOR_ORDER_APPROVE)
 
         messenger.answer_callback_query(update["callback_query"]["id"])
 
         messenger.delete_message(
-            chat_id=update["callback_query"]["message"]["chat"]["id"],
+            chat_id=chat_id,
             message_id=update["callback_query"]["message"]["message_id"],
         )
 
@@ -67,8 +66,8 @@ class DrinkSelection(Handler):
         )
 
         messenger.send_message(
-            chat_id=update["callback_query"]["message"]["chat"]["id"],
-            text=order_summary, 
+            chat_id=chat_id,
+            text=order_summary,
             parse_mode="Markdown",
             reply_markup=json.dumps(
                 {

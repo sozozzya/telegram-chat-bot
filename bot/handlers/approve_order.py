@@ -52,8 +52,7 @@ class ApproveOrder(Handler):
         drink_price = DRINK_PRICES.get(drink, 0)
 
         prices = [
-            {"label": f"Pizza: {pizza_name} ({pizza_size})",
-             "amount": pizza_price}
+            {"label": f"Pizza: {pizza_name} ({pizza_size})", "amount": pizza_price}
         ]
         if drink and drink != "No drinks":
             prices.append({"label": f"Drink: {drink}", "amount": drink_price})
