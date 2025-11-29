@@ -1,4 +1,5 @@
 import json
+import asyncio
 from bot.domain.messenger import Messenger
 from bot.domain.storage import Storage
 from bot.handlers.handler import Handler, HandlerStatus
@@ -24,7 +25,7 @@ class PizzaSize(Handler):
         callback_data = update["callback_query"]["data"]
         return callback_data.startswith("size_")
 
-    def handle(
+    async def handle(
         self,
         update: dict,
         state: OrderState,
@@ -44,16 +45,15 @@ class PizzaSize(Handler):
 
         pizza_size = size_mapping.get(callback_data)
         order_json["pizza_size"] = pizza_size
+        chat_id = update["callback_query"]["message"]["chat"]["id"]
+        message_id = update["callback_query"]["message"]["message_id"]
+        callback_query_id = update["callback_query"]["id"]
 
-        storage.update_user_order_json(telegram_id, order_json)
-
-        storage.update_user_state(telegram_id, OrderState.WAIT_FOR_DRINKS)
-
-        messenger.answer_callback_query(update["callback_query"]["id"])
-
-        messenger.delete_message(
-            chat_id=update["callback_query"]["message"]["chat"]["id"],
-            message_id=update["callback_query"]["message"]["message_id"],
+        # Выполнить обновления БД и answer_callback_query параллельно
+        await asyncio.gather(
+            storage.update_user_order_json(telegram_id, order_json),
+            storage.update_user_state(telegram_id, OrderState.WAIT_FOR_DRINKS),
+            messenger.answer_callback_query(callback_query_id),
         )
 
         text = (
@@ -62,51 +62,55 @@ class PizzaSize(Handler):
             f"Would you like a drink? 🥤"
         )
 
-        messenger.send_message(
-            chat_id=update["callback_query"]["message"]["chat"]["id"],
-            text=text,
-            parse_mode="Markdown",
-            reply_markup=json.dumps(
-                {
-                    "inline_keyboard": [
-                        [
-                            {
-                                "text": f"🥤 Coca-cola — {DRINK_PRICES['Coca Cola'] // 100} ₽",
-                                "callback_data": "drink_coca_cola",
-                            },
-                            {
-                                "text": f"🥤 Pepsi — {DRINK_PRICES['Pepsi'] // 100} ₽",
-                                "callback_data": "drink_pepsi",
-                            },
+        # Удалить сообщение и отправить новое параллельно
+        await asyncio.gather(
+            messenger.delete_message(chat_id=chat_id, message_id=message_id),
+            messenger.send_message(
+                chat_id=update["callback_query"]["message"]["chat"]["id"],
+                text=text,
+                parse_mode="Markdown",
+                reply_markup=json.dumps(
+                    {
+                        "inline_keyboard": [
+                            [
+                                {
+                                    "text": f"🥤 Coca-cola — {DRINK_PRICES['Coca Cola'] // 100} ₽",
+                                    "callback_data": "drink_coca_cola",
+                                },
+                                {
+                                    "text": f"🥤 Pepsi — {DRINK_PRICES['Pepsi'] // 100} ₽",
+                                    "callback_data": "drink_pepsi",
+                                },
+                            ],
+                            [
+                                {
+                                    "text": f"🍊 Orange Juice — {DRINK_PRICES['Orange Juice'] // 100} ₽",
+                                    "callback_data": "drink_orange_juice",
+                                },
+                                {
+                                    "text": f"🍏 Apple Juice — {DRINK_PRICES['Apple Juice'] // 100} ₽",
+                                    "callback_data": "drink_apple_juice",
+                                },
+                            ],
+                            [
+                                {
+                                    "text": f"💧 Water — {DRINK_PRICES['Water'] // 100} ₽",
+                                    "callback_data": "drink_water",
+                                },
+                                {
+                                    "text": f"🧊 Iced Tea — {DRINK_PRICES['Iced Tea'] // 100} ₽",
+                                    "callback_data": "drink_iced_tea",
+                                },
+                            ],
+                            [
+                                {
+                                    "text": "🚫 No drinks",
+                                    "callback_data": "drink_no_drinks",
+                                },
+                            ],
                         ],
-                        [
-                            {
-                                "text": f"🍊 Orange Juice — {DRINK_PRICES['Orange Juice'] // 100} ₽",
-                                "callback_data": "drink_orange_juice",
-                            },
-                            {
-                                "text": f"🍏 Apple Juice — {DRINK_PRICES['Apple Juice'] // 100} ₽",
-                                "callback_data": "drink_apple_juice",
-                            },
-                        ],
-                        [
-                            {
-                                "text": f"💧 Water — {DRINK_PRICES['Water'] // 100} ₽",
-                                "callback_data": "drink_water",
-                            },
-                            {
-                                "text": f"🧊 Iced Tea — {DRINK_PRICES['Iced Tea'] // 100} ₽",
-                                "callback_data": "drink_iced_tea",
-                            },
-                        ],
-                        [
-                            {
-                                "text": "🚫 No drinks",
-                                "callback_data": "drink_no_drinks",
-                            },
-                        ],
-                    ],
-                },
+                    },
+                ),
             ),
         )
         return HandlerStatus.STOP

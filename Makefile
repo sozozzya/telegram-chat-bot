@@ -80,7 +80,7 @@ run: docker_net
 	  --name $(BOT_CONTAINER) \
 	  --restart unless-stopped \
 	  -e POSTGRES_HOST="$(POSTGRES_CONTAINER)" \
-	  -e POSTGRES_PORT="5432" \
+	  -e POSTGRES_PORT="$(POSTGRES_CONTAINER_PORT)" \
 	  -e POSTGRES_USER="$(POSTGRES_USER)" \
 	  -e POSTGRES_PASSWORD="$(POSTGRES_PASSWORD)" \
 	  -e POSTGRES_DATABASE="$(POSTGRES_DATABASE)" \
@@ -92,3 +92,6 @@ run: docker_net
 stop:
 	docker stop $(BOT_CONTAINER)
 	docker rm $(BOT_CONTAINER)
+
+logs:
+	docker logs -f $(BOT_CONTAINER)

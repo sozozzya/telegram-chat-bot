@@ -1,4 +1,5 @@
 import json
+import asyncio
 from bot.domain.messenger import Messenger
 from bot.domain.storage import Storage
 from bot.handlers.handler import Handler, HandlerStatus
@@ -23,7 +24,7 @@ class RestartOrder(Handler):
         callback_data = update["callback_query"]["data"]
         return callback_data == "restart_order"
 
-    def handle(
+    async def handle(
         self,
         update: dict,
         state: OrderState,
@@ -33,19 +34,18 @@ class RestartOrder(Handler):
     ) -> HandlerStatus:
         telegram_id = update["callback_query"]["from"]["id"]
         chat_id = update["callback_query"]["message"]["chat"]["id"]
+        message_id = update["callback_query"]["message"]["message_id"]
+        callback_query_id = update["callback_query"]["id"]
 
-        messenger.answer_callback_query(update["callback_query"]["id"])
-
-        messenger.delete_message(
-            chat_id=chat_id,
-            message_id=update["callback_query"]["message"]["message_id"],
+        # Выполнить answer_callback_query, delete_message и обновления БД параллельно
+        await asyncio.gather(
+            messenger.answer_callback_query(callback_query_id),
+            messenger.delete_message(chat_id=chat_id, message_id=message_id),
+            storage.clear_user_order_json(telegram_id),
+            storage.update_user_state(telegram_id, OrderState.WAIT_FOR_PIZZA_NAME),
         )
 
-        storage.clear_user_order_json(telegram_id)
-
-        storage.update_user_state(telegram_id, "WAIT_FOR_PIZZA_NAME")
-
-        messenger.send_message(
+        await messenger.send_message(
             chat_id=chat_id,
             text="Please choose your pizza 🍽️",
             reply_markup=json.dumps(

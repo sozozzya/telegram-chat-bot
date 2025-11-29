@@ -17,7 +17,7 @@ class SuccessfulPaymentHandler(Handler):
     ) -> bool:
         return "message" in update and "successful_payment" in update["message"]
 
-    def handle(
+    async def handle(
         self,
         update: dict,
         state: OrderState,
@@ -28,9 +28,9 @@ class SuccessfulPaymentHandler(Handler):
         telegram_id = update["message"]["from"]["id"]
 
         # Update user state to ORDER_FINISHED
-        storage.update_user_state(telegram_id, OrderState.ORDER_FINISHED)
+        await storage.update_user_state(telegram_id, OrderState.ORDER_FINISHED)
 
-        messenger.send_message(
+        await messenger.send_message(
             chat_id=update["message"]["chat"]["id"],
             text=(
                 "🎉 Thank you! Your payment has been received. 🚚 Pizza will be ready soon.\n\n"

@@ -15,7 +15,7 @@ class PreCheckoutQueryHandler(Handler):
     ) -> bool:
         return "pre_checkout_query" in update
 
-    def handle(
+    async def handle(
         self,
         update: dict,
         state: OrderState,
@@ -26,7 +26,8 @@ class PreCheckoutQueryHandler(Handler):
         pre_checkout_query = update["pre_checkout_query"]
         pre_checkout_query_id = pre_checkout_query["id"]
 
-        messenger.answer_pre_checkout_query(
+        # Answer with ok=True to approve the payment
+        await messenger.answer_pre_checkout_query(
             pre_checkout_query_id=pre_checkout_query_id, ok=True
         )
 

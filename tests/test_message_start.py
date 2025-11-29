@@ -3,6 +3,7 @@ from bot.handlers.message_start import MessageStart
 from bot.domain.order_state import OrderState
 from tests.mocks import Mock
 import json
+import asyncio
 
 
 def test_message_start_handler():
@@ -31,22 +32,22 @@ def test_message_start_handler():
     update_user_state_called = False
     send_message_calls = []
 
-    def clear_user_order_json(telegram_id: int) -> None:
+    async def clear_user_order_json(telegram_id: int):
         assert telegram_id == 12345
         nonlocal clear_user_data_called
         clear_user_data_called = True
 
-    def update_user_state(telegram_id: int, state: OrderState) -> None:
+    async def update_user_state(telegram_id: int, state: OrderState):
         assert telegram_id == 12345
         assert state == OrderState.WAIT_FOR_PIZZA_NAME
         nonlocal update_user_state_called
         update_user_state_called = True
 
-    def get_user(telegram_id: int) -> dict | None:
+    async def get_user(telegram_id: int):
         assert telegram_id == 12345
         return {"state": None, "order_json": "{}"}
 
-    def send_message(chat_id: int, text: str, **kwargs) -> dict:
+    async def send_message(chat_id: int, text: str, **kwargs):
         assert chat_id == 12345
         send_message_calls.append({"text": text, "kwargs": kwargs})
         return {"ok": True}
@@ -61,9 +62,9 @@ def test_message_start_handler():
     mock_messenger = Mock({"send_message": send_message})
 
     dispatcher = Dispatcher(mock_storage, mock_messenger)
-    dispatcher.add_handler(MessageStart())
+    dispatcher.add_handlers(MessageStart())
 
-    dispatcher.dispatch(test_update)
+    asyncio.run(dispatcher.dispatch(test_update))
 
     assert clear_user_data_called, "Ожидался вызов clear_user_order_json"
     assert update_user_state_called, "Ожидался вызов update_user_state"

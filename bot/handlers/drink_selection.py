@@ -1,4 +1,5 @@
 import json
+import asyncio
 from bot.domain.messenger import Messenger
 from bot.domain.storage import Storage
 from bot.handlers.handler import Handler, HandlerStatus
@@ -24,7 +25,7 @@ class DrinkSelection(Handler):
         callback_data = update["callback_query"]["data"]
         return callback_data.startswith("drink_")
 
-    def handle(
+    async def handle(
         self,
         update: dict,
         state: OrderState,
@@ -41,14 +42,15 @@ class DrinkSelection(Handler):
             drink = "No drinks"
 
         order_json["drink"] = drink
-        storage.update_user_order_json(telegram_id, order_json)
-        storage.update_user_state(telegram_id, OrderState.WAIT_FOR_ORDER_APPROVE)
+        chat_id = update["callback_query"]["message"]["chat"]["id"]
+        message_id = update["callback_query"]["message"]["message_id"]
+        callback_query_id = update["callback_query"]["id"]
 
-        messenger.answer_callback_query(update["callback_query"]["id"])
-
-        messenger.delete_message(
-            chat_id=chat_id,
-            message_id=update["callback_query"]["message"]["message_id"],
+        # Выполнить обновления БД и answer_callback_query параллельно
+        await asyncio.gather(
+            storage.update_user_order_json(telegram_id, order_json),
+            storage.update_user_state(telegram_id, OrderState.WAIT_FOR_ORDER_APPROVE),
+            messenger.answer_callback_query(callback_query_id),
         )
 
         pizza_name = order_json.get("pizza_name", "Unknown")
@@ -65,22 +67,29 @@ class DrinkSelection(Handler):
             f"💰 Total: *{pizza_price_rub + drink_price_rub} ₽*"
         )
 
-        messenger.send_message(
-            chat_id=chat_id,
-            text=order_summary,
-            parse_mode="Markdown",
-            reply_markup=json.dumps(
-                {
-                    "inline_keyboard": [
-                        [
-                            {"text": "✅ Confirm", "callback_data": "approve_order"},
-                            {
-                                "text": "🔄 Start Over",
-                                "callback_data": "restart_order",
-                            },
-                        ]
-                    ],
-                }
+        # Удалить сообщение и отправить новое параллельно
+        await asyncio.gather(
+            messenger.delete_message(chat_id=chat_id, message_id=message_id),
+            messenger.send_message(
+                chat_id=chat_id,
+                text=order_summary,
+                parse_mode="Markdown",
+                reply_markup=json.dumps(
+                    {
+                        "inline_keyboard": [
+                            [
+                                {
+                                    "text": "✅ Confirm",
+                                    "callback_data": "approve_order",
+                                },
+                                {
+                                    "text": "🔄 Start Over",
+                                    "callback_data": "restart_order",
+                                },
+                            ]
+                        ],
+                    }
+                ),
             ),
         )
         return HandlerStatus.STOP
