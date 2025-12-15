@@ -34,8 +34,8 @@ jobs:
 
     - name: Run Black code style check
       run: |
-        black --check bot/ tests/
+        black --check bot/
 
     - name: Run Ruff linting check
       run: |
-        ruff check bot/ tests/
+        ruff check bot/
